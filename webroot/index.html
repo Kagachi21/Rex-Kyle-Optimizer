@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSU Optimizer Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% -20%, #1e3a8a 0%, var(--bg-color) 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            padding: 12px 0;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .panel-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .panel-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, filter 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-perf { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+        .btn-bal { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .btn-save { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+        }
+
+        .status-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-area {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #a78bfa;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 15px;
+        }
+
+        /* iOS style toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+        
+        .shield-icon {
+            font-size: 40px;
+            text-align: center;
+            margin: 10px 0 20px 0;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .shield-active {
+            color: var(--success);
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>KSU Optimizer</h2>
+    <div class="subtitle">Premium Performance & Protection</div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('mode')">⚡ Mode</button>
+        <button class="tab-btn" onclick="switchTab('tuning')">🎛️ Tuning</button>
+        <button class="tab-btn" onclick="switchTab('shield')">🛡️ Shield</button>
+    </div>
+
+    <!-- TAB 1: MODE -->
+    <div id="tab-mode" class="glass-panel panel-content active">
+        <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 14px;">Profil Performa Governor:</p>
+        <button class="btn btn-perf" onclick="execCmd('mode', 'performance')">🔥 Performance</button>
+        <button class="btn btn-bal" onclick="execCmd('mode', 'balance')">⚖️ Balance</button>
+        <button class="btn btn-save" onclick="execCmd('mode', 'powersave')">🔋 Power Save</button>
+        
+        <div class="status-box">
+            <span style="color: var(--text-muted);">Status Saat Ini:</span>
+            <span id="modeText" style="font-weight: 600; color: var(--primary);">Loading...</span>
+        </div>
+    </div>
+
+    <!-- TAB 2: TUNING -->
+    <div id="tab-tuning" class="glass-panel panel-content">
+        <div class="info-area" id="infoArea">Memuat Data Hardware...</div>
+        <button class="btn btn-outline" onclick="fetchInfo()" style="padding: 10px;">🔄 Refresh Status</button>
+        
+        <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 20px 0;">
+        
+        <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 14px;">Kontrol Frekuensi Max/Min:</p>
+        <button class="btn btn-perf" onclick="execCmd('oc')">🚀 Force High Clock (OC)</button>
+        <button class="btn btn-save" onclick="execCmd('uv')">❄️ Limit Low Clock (UV)</button>
+        <button class="btn btn-outline" onclick="execCmd('reset')">⚠️ Reset Clock Stok</button>
+    </div>
+
+    <!-- TAB 3: SHIELD -->
+    <div id="tab-shield" class="glass-panel panel-content">
+        <div class="shield-icon" id="shieldIcon">🛡️</div>
+        <p style="text-align: center; margin-bottom: 20px; color: var(--text-muted); font-size: 14px;">
+            DNS Interception via AdGuard DNS. Otomatis memblokir iklan, pelacak, dan malware dari level kernel (iptables).
+        </p>
+
+        <div class="toggle-container">
+            <div>
+                <div style="font-weight: 600;">Network Shield</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">Status: <span id="shieldStatusText">Off</span></div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="shieldToggle" onchange="toggleShield()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById('tab-' + tab).classList.add('active');
+        event.target.classList.add('active');
+        
+        if(tab === 'tuning') fetchInfo();
+        if(tab === 'shield') checkShieldStatus();
+    }
+
+    function execCmd(cmd, val = '') {
+        let url = '/cgi-bin/action.sh?cmd=' + cmd;
+        if (val) url += '&value=' + val;
+        
+        fetch(url).then(r => r.text()).then(res => {
+            alert(res);
+            if(cmd === 'mode') checkModeStatus();
+        });
+    }
+
+    function checkModeStatus() {
+        fetch('/cgi-bin/action.sh?get=1').then(r => r.text()).then(t => {
+            document.getElementById('modeText').innerText = t.trim().toUpperCase();
+        });
+    }
+
+    function fetchInfo() {
+        fetch('/cgi-bin/action.sh?cmd=info').then(r => r.text()).then(t => {
+            document.getElementById('infoArea').textContent = t;
+        });
+    }
+
+    function checkShieldStatus() {
+        fetch('/cgi-bin/action.sh?cmd=shield_status').then(r => r.text()).then(t => {
+            const isActive = t.trim() === '1';
+            const toggle = document.getElementById('shieldToggle');
+            const icon = document.getElementById('shieldIcon');
+            const text = document.getElementById('shieldStatusText');
+            
+            toggle.checked = isActive;
+            if(isActive) {
+                icon.classList.add('shield-active');
+                text.innerText = 'Aktif (Protected)';
+                text.style.color = 'var(--success)';
+            } else {
+                icon.classList.remove('shield-active');
+                text.innerText = 'Mati';
+                text.style.color = 'var(--text-muted)';
+            }
+        });
+    }
+
+    function toggleShield() {
+        const isActive = document.getElementById('shieldToggle').checked;
+        const cmd = isActive ? 'shield_enable' : 'shield_disable';
+        
+        fetch('/cgi-bin/action.sh?cmd=' + cmd).then(r => r.text()).then(res => {
+            checkShieldStatus();
+        });
+    }
+
+    // Init
+    checkModeStatus();
+</script>
+
+</body>
+</html>

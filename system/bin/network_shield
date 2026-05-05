@@ -1,0 +1,46 @@
+#!/system/bin/sh
+# KSU Optimizer - Network Shield (DNS Interception)
+
+STATE_FILE="/data/adb/ksu_optimizer/shield_state"
+
+enable_shield() {
+    # Hapus rule lama agar tidak ganda
+    disable_shield >/dev/null 2>&1
+    
+    # IPv4 DNS redirection (AdGuard DNS)
+    iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination 94.140.14.14:53 2>/dev/null
+    iptables -t nat -I OUTPUT -p udp --dport 53 -j DNAT --to-destination 94.140.14.14:53 2>/dev/null
+    
+    # IPv6 DNS redirection (jika didukung)
+    ip6tables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination [2a10:50c0::ad1]:53 2>/dev/null
+    ip6tables -t nat -I OUTPUT -p udp --dport 53 -j DNAT --to-destination [2a10:50c0::ad1]:53 2>/dev/null
+    
+    echo "1" > "$STATE_FILE"
+    echo "Network Shield (AdGuard DNS) telah AKTIF."
+}
+
+disable_shield() {
+    iptables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination 94.140.14.14:53 2>/dev/null
+    iptables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination 94.140.14.14:53 2>/dev/null
+    
+    ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination [2a10:50c0::ad1]:53 2>/dev/null
+    ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination [2a10:50c0::ad1]:53 2>/dev/null
+    
+    echo "0" > "$STATE_FILE"
+    echo "Network Shield telah DIMATIKAN."
+}
+
+status_shield() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    else
+        echo "0"
+    fi
+}
+
+case "$1" in
+    enable) enable_shield ;;
+    disable) disable_shield ;;
+    status) status_shield ;;
+    *) echo "Perintah: network_shield [enable|disable|status]" ;;
+esac

@@ -1,0 +1,116 @@
+#!/system/bin/sh
+# KSU Optimizer - Shell Based Clock Controller
+
+get_max_freq() {
+    local avail=$(cat "$1" 2>/dev/null)
+    local max=0
+    for f in $avail; do
+        [ "$f" -gt "$max" ] && max=$f
+    done
+    echo "$max"
+}
+
+get_min_freq() {
+    local avail=$(cat "$1" 2>/dev/null)
+    local min=999999999
+    for f in $avail; do
+        [ "$f" -lt "$min" ] && min=$f
+    done
+    echo "$min"
+}
+
+lock_high_clock() {
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        local avail="$cpu/cpufreq/scaling_available_frequencies"
+        if [ -f "$avail" ]; then
+            local max_f=$(get_max_freq "$avail")
+            if [ "$max_f" -gt 0 ]; then
+                echo "$max_f" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                echo "$max_f" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+            fi
+        fi
+    done
+    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
+    if [ -f "$avail_gpu" ]; then
+        local max_gpu=$(get_max_freq "$avail_gpu")
+        if [ "$max_gpu" -gt 0 ]; then
+            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
+            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
+        fi
+    fi
+    echo "Sukses: CPU dan GPU dikunci ke Clock Tertinggi (Mode OC)."
+}
+
+limit_low_clock() {
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        local avail="$cpu/cpufreq/scaling_available_frequencies"
+        if [ -f "$avail" ]; then
+            local min_f=$(get_min_freq "$avail")
+            if [ "$min_f" -lt 999999999 ]; then
+                echo "$min_f" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+                echo "$min_f" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+            fi
+        fi
+    done
+    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
+    if [ -f "$avail_gpu" ]; then
+        local min_gpu=$(get_min_freq "$avail_gpu")
+        if [ "$min_gpu" -lt 999999999 ]; then
+            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
+            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
+        fi
+    fi
+    echo "Sukses: CPU dan GPU dibatasi ke Clock Terendah (Mode UV/Power Save)."
+}
+
+reset_clock() {
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
+            local stock_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
+            local stock_min=$(cat "$cpu/cpufreq/cpuinfo_min_freq" 2>/dev/null)
+            echo "$stock_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+            echo "$stock_min" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+        fi
+    done
+    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
+    if [ -f "$avail_gpu" ]; then
+        local min_gpu=$(get_min_freq "$avail_gpu")
+        local max_gpu=$(get_max_freq "$avail_gpu")
+        if [ "$max_gpu" -gt 0 ]; then
+            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
+            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
+        fi
+    fi
+    echo "Clock CPU dan GPU di-reset ke stok bawaan kernel."
+}
+
+apply_mode() {
+    echo "$1" > /data/adb/ksu_optimizer/mode
+    local gov_cpu=""
+    local gov_gpu=""
+    case "$1" in
+        performance) gov_cpu="performance"; gov_gpu="performance" ;;
+        balance) gov_cpu="schedutil"; gov_gpu="msm-adreno-tz" ;;
+        powersave) gov_cpu="powersave"; gov_gpu="powersave" ;;
+        *) echo "Mode tidak dikenal"; exit 1 ;;
+    esac
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        echo "$gov_cpu" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
+    done
+    echo "$gov_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/governor" 2>/dev/null
+    echo "Mode $1 diterapkan."
+}
+
+info_clock() {
+    echo "CPU freq saat ini: $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null) kHz"
+    echo "GPU freq saat ini: $(cat /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null || cat /sys/class/kgsl/kgsl-3d0/gpuclk 2>/dev/null) Hz"
+}
+
+case "$1" in
+    oc) lock_high_clock ;;
+    uv) limit_low_clock ;;
+    reset) reset_clock ;;
+    mode) apply_mode "$2" ;;
+    info) info_clock ;;
+    *) echo "Perintah tidak dikenal" ;;
+esac

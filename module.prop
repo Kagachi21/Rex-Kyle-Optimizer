@@ -1,0 +1,7 @@
+id=ksu_optimizer
+name=KSU Optimizer
+version=v1.0
+versionCode=50
+author=OptimizerX
+description=AI Auto-tune Performance|Balance|Power Save + camera/BT/WiFi/Audio for Snapdragon. Now with WebUI!
+webui=1
