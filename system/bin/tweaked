@@ -1,6 +1,22 @@
 #!/system/bin/sh
 # KSU Optimizer - Shell Based Clock Controller
 
+GPU_PATH=""
+find_gpu_path() {
+    if [ -d "/sys/class/kgsl/kgsl-3d0/devfreq" ]; then
+        GPU_PATH="/sys/class/kgsl/kgsl-3d0/devfreq"
+    else
+        GPU_PATH=$(ls -d /sys/class/devfreq/*mali* 2>/dev/null | head -n 1)
+        if [ -z "$GPU_PATH" ]; then
+            GPU_PATH=$(ls -d /sys/class/devfreq/*gpu* 2>/dev/null | head -n 1)
+        fi
+        if [ -z "$GPU_PATH" ]; then
+            GPU_PATH=$(ls -d /sys/class/devfreq/1c00000.qcom,kgsl-3d0 2>/dev/null | head -n 1)
+        fi
+    fi
+}
+find_gpu_path
+
 get_max_freq() {
     local avail=$(cat "$1" 2>/dev/null)
     local max=0
@@ -30,12 +46,11 @@ lock_high_clock() {
             fi
         fi
     done
-    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
-    if [ -f "$avail_gpu" ]; then
-        local max_gpu=$(get_max_freq "$avail_gpu")
+    if [ -n "$GPU_PATH" ] && [ -f "$GPU_PATH/available_frequencies" ]; then
+        local max_gpu=$(get_max_freq "$GPU_PATH/available_frequencies")
         if [ "$max_gpu" -gt 0 ]; then
-            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
-            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
+            echo "$max_gpu" > "$GPU_PATH/max_freq" 2>/dev/null
+            echo "$max_gpu" > "$GPU_PATH/min_freq" 2>/dev/null
         fi
     fi
     echo "Sukses: CPU dan GPU dikunci ke Clock Tertinggi (Mode OC)."
@@ -52,12 +67,11 @@ limit_low_clock() {
             fi
         fi
     done
-    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
-    if [ -f "$avail_gpu" ]; then
-        local min_gpu=$(get_min_freq "$avail_gpu")
+    if [ -n "$GPU_PATH" ] && [ -f "$GPU_PATH/available_frequencies" ]; then
+        local min_gpu=$(get_min_freq "$GPU_PATH/available_frequencies")
         if [ "$min_gpu" -lt 999999999 ]; then
-            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
-            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
+            echo "$min_gpu" > "$GPU_PATH/min_freq" 2>/dev/null
+            echo "$min_gpu" > "$GPU_PATH/max_freq" 2>/dev/null
         fi
     fi
     echo "Sukses: CPU dan GPU dibatasi ke Clock Terendah (Mode UV/Power Save)."
@@ -72,13 +86,12 @@ reset_clock() {
             echo "$stock_min" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
         fi
     done
-    local avail_gpu="/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
-    if [ -f "$avail_gpu" ]; then
-        local min_gpu=$(get_min_freq "$avail_gpu")
-        local max_gpu=$(get_max_freq "$avail_gpu")
+    if [ -n "$GPU_PATH" ] && [ -f "$GPU_PATH/available_frequencies" ]; then
+        local min_gpu=$(get_min_freq "$GPU_PATH/available_frequencies")
+        local max_gpu=$(get_max_freq "$GPU_PATH/available_frequencies")
         if [ "$max_gpu" -gt 0 ]; then
-            echo "$max_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq" 2>/dev/null
-            echo "$min_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq" 2>/dev/null
+            echo "$max_gpu" > "$GPU_PATH/max_freq" 2>/dev/null
+            echo "$min_gpu" > "$GPU_PATH/min_freq" 2>/dev/null
         fi
     fi
     echo "Clock CPU dan GPU di-reset ke stok bawaan kernel."
@@ -97,13 +110,83 @@ apply_mode() {
     for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
         echo "$gov_cpu" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
     done
-    echo "$gov_gpu" > "/sys/class/kgsl/kgsl-3d0/devfreq/governor" 2>/dev/null
+    if [ -n "$GPU_PATH" ]; then
+        echo "$gov_gpu" > "$GPU_PATH/governor" 2>/dev/null
+    fi
     echo "Mode $1 diterapkan."
 }
 
 info_clock() {
     echo "CPU freq saat ini: $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null) kHz"
-    echo "GPU freq saat ini: $(cat /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null || cat /sys/class/kgsl/kgsl-3d0/gpuclk 2>/dev/null) Hz"
+    if [ -n "$GPU_PATH" ]; then
+        echo "GPU freq saat ini: $(cat $GPU_PATH/cur_freq 2>/dev/null || cat /sys/class/kgsl/kgsl-3d0/gpuclk 2>/dev/null) Hz"
+    else
+        echo "GPU freq saat ini: Tidak Terdeteksi"
+    fi
+    echo "CPU Gov saat ini: $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)"
+    if [ -n "$GPU_PATH" ]; then
+        echo "GPU Gov saat ini: $(cat $GPU_PATH/governor 2>/dev/null)"
+    else
+        echo "GPU Gov saat ini: Tidak Terdeteksi"
+    fi
+}
+
+get_adv_info() {
+    local cpu_govs=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors 2>/dev/null)
+    local cpu_freqs=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies 2>/dev/null)
+    local cur_cpu_gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)
+    
+    local gpu_govs=""
+    local gpu_freqs=""
+    local cur_gpu_gov=""
+    if [ -n "$GPU_PATH" ]; then
+        gpu_govs=$(cat $GPU_PATH/available_governors 2>/dev/null)
+        gpu_freqs=$(cat $GPU_PATH/available_frequencies 2>/dev/null)
+        cur_gpu_gov=$(cat $GPU_PATH/governor 2>/dev/null)
+    fi
+
+    echo "{"
+    echo "  \"cpu_govs\": \"$cpu_govs\","
+    echo "  \"cpu_freqs\": \"$cpu_freqs\","
+    echo "  \"cur_cpu_gov\": \"$cur_cpu_gov\","
+    echo "  \"gpu_govs\": \"$gpu_govs\","
+    echo "  \"gpu_freqs\": \"$gpu_freqs\","
+    echo "  \"cur_gpu_gov\": \"$cur_gpu_gov\""
+    echo "}"
+}
+
+set_cpu_gov() {
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        echo "$1" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
+    done
+    echo "CPU Governor diubah ke $1"
+}
+
+set_gpu_gov() {
+    if [ -n "$GPU_PATH" ]; then
+        echo "$1" > "$GPU_PATH/governor" 2>/dev/null
+        echo "GPU Governor diubah ke $1"
+    else
+        echo "GPU Path tidak ditemukan"
+    fi
+}
+
+set_cpu_freq() {
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        echo "$2" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+        echo "$1" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+    done
+    echo "CPU freq diset Min:$1 Max:$2"
+}
+
+set_gpu_freq() {
+    if [ -n "$GPU_PATH" ]; then
+        echo "$2" > "$GPU_PATH/max_freq" 2>/dev/null
+        echo "$1" > "$GPU_PATH/min_freq" 2>/dev/null
+        echo "GPU freq diset Min:$1 Max:$2"
+    else
+        echo "GPU Path tidak ditemukan"
+    fi
 }
 
 case "$1" in
@@ -112,5 +195,10 @@ case "$1" in
     reset) reset_clock ;;
     mode) apply_mode "$2" ;;
     info) info_clock ;;
+    adv_info) get_adv_info ;;
+    set_cpu_gov) set_cpu_gov "$2" ;;
+    set_gpu_gov) set_gpu_gov "$2" ;;
+    set_cpu_freq) set_cpu_freq "$2" "$3" ;;
+    set_gpu_freq) set_gpu_freq "$2" "$3" ;;
     *) echo "Perintah tidak dikenal" ;;
 esac

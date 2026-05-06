@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KSU Optimizer Pro</title>
+    <title>Rex Andromalius Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -130,6 +130,7 @@
         .btn-perf { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
         .btn-bal { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
         .btn-save { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+        .btn-apply { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); padding: 10px;}
         
         .btn-outline {
             background: transparent;
@@ -226,12 +227,44 @@
             text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
         }
 
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            appearance: none;
+        }
+        select option {
+            background: var(--bg-color);
+            color: var(--text-main);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>KSU Optimizer</h2>
+    <h2>Rex Andromalius</h2>
     <div class="subtitle">Premium Performance & Protection</div>
 
     <div class="tabs">
@@ -260,7 +293,45 @@
         
         <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 20px 0;">
         
-        <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 14px;">Kontrol Frekuensi Max/Min:</p>
+        <p style="margin-bottom: 15px; color: var(--text-main); font-weight: 600; font-size: 15px;">Advanced Tuning Manual</p>
+        
+        <div class="form-group">
+            <label>CPU Governor</label>
+            <div style="display: flex; gap: 10px;">
+                <select id="cpuGovSelect"><option>Loading...</option></select>
+                <button class="btn btn-apply" style="width: auto; margin-bottom: 0;" onclick="applyCpuGov()">Set</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>GPU Governor</label>
+            <div style="display: flex; gap: 10px;">
+                <select id="gpuGovSelect"><option>Loading...</option></select>
+                <button class="btn btn-apply" style="width: auto; margin-bottom: 0;" onclick="applyGpuGov()">Set</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>CPU Frequency Lock</label>
+            <div class="grid-2">
+                <select id="cpuMinSelect"><option>Min Freq</option></select>
+                <select id="cpuMaxSelect"><option>Max Freq</option></select>
+            </div>
+            <button class="btn btn-apply" style="margin-top: 10px;" onclick="applyCpuFreq()">Apply CPU Freq</button>
+        </div>
+
+        <div class="form-group">
+            <label>GPU Frequency Lock</label>
+            <div class="grid-2">
+                <select id="gpuMinSelect"><option>Min Freq</option></select>
+                <select id="gpuMaxSelect"><option>Max Freq</option></select>
+            </div>
+            <button class="btn btn-apply" style="margin-top: 10px;" onclick="applyGpuFreq()">Apply GPU Freq</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 20px 0;">
+
+        <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 14px;">Kontrol Frekuensi Non-Manual / Preset:</p>
         <button class="btn btn-perf" onclick="execCmd('oc')">🚀 Force High Clock (OC)</button>
         <button class="btn btn-save" onclick="execCmd('uv')">❄️ Limit Low Clock (UV)</button>
         <button class="btn btn-outline" onclick="execCmd('reset')">⚠️ Reset Clock Stok</button>
@@ -295,7 +366,10 @@
         document.getElementById('tab-' + tab).classList.add('active');
         event.target.classList.add('active');
         
-        if(tab === 'tuning') fetchInfo();
+        if(tab === 'tuning') {
+            fetchInfo();
+            fetchAdvInfo();
+        }
         if(tab === 'shield') checkShieldStatus();
     }
 
@@ -306,6 +380,7 @@
         fetch(url).then(r => r.text()).then(res => {
             alert(res);
             if(cmd === 'mode') checkModeStatus();
+            if(['oc', 'uv', 'reset'].includes(cmd)) fetchInfo();
         });
     }
 
@@ -319,6 +394,64 @@
         fetch('/cgi-bin/action.sh?cmd=info').then(r => r.text()).then(t => {
             document.getElementById('infoArea').textContent = t;
         });
+    }
+
+    function populateSelect(id, valuesStr, currentVal) {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        if (!valuesStr || valuesStr.trim() === '') {
+            select.innerHTML = '<option value="">Tidak Tersedia</option>';
+            return;
+        }
+        const values = valuesStr.trim().split(/\s+/);
+        values.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            if (v === currentVal) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function fetchAdvInfo() {
+        fetch('/cgi-bin/action.sh?cmd=adv_info').then(r => r.json()).then(data => {
+            populateSelect('cpuGovSelect', data.cpu_govs, data.cur_cpu_gov);
+            populateSelect('gpuGovSelect', data.gpu_govs, data.cur_gpu_gov);
+            populateSelect('cpuMinSelect', data.cpu_freqs, '');
+            populateSelect('cpuMaxSelect', data.cpu_freqs, '');
+            populateSelect('gpuMinSelect', data.gpu_freqs, '');
+            populateSelect('gpuMaxSelect', data.gpu_freqs, '');
+        }).catch(err => console.error("Error parsing adv_info:", err));
+    }
+
+    function applyCpuGov() {
+        const val = document.getElementById('cpuGovSelect').value;
+        if(val) execCmd('set_cpu_gov', val);
+    }
+
+    function applyGpuGov() {
+        const val = document.getElementById('gpuGovSelect').value;
+        if(val) execCmd('set_gpu_gov', val);
+    }
+
+    function applyCpuFreq() {
+        const min = document.getElementById('cpuMinSelect').value;
+        const max = document.getElementById('cpuMaxSelect').value;
+        if(min && max) {
+            fetch('/cgi-bin/action.sh?cmd=set_cpu_freq&min=' + min + '&max=' + max).then(r => r.text()).then(res => {
+                alert(res); fetchInfo();
+            });
+        }
+    }
+
+    function applyGpuFreq() {
+        const min = document.getElementById('gpuMinSelect').value;
+        const max = document.getElementById('gpuMaxSelect').value;
+        if(min && max) {
+            fetch('/cgi-bin/action.sh?cmd=set_gpu_freq&min=' + min + '&max=' + max).then(r => r.text()).then(res => {
+                alert(res); fetchInfo();
+            });
+        }
     }
 
     function checkShieldStatus() {

@@ -1,6 +1,6 @@
-# KSU Optimizer Pro & Network Shield 🚀🛡️
+# Rex Kyle Optimizer Pro & Network Shield 🚀🛡️
 
-KSU Optimizer Pro adalah modul KernelSU/Magisk tingkat lanjut yang dirancang khusus untuk memaksimalkan performa Android, menghemat baterai secara ekstrem, sekaligus melindungi perangkat Anda dari Iklan dan *Malware* langsung dari level Kernel.
+Rex Kyle Optimizer Pro adalah modul KernelSU/Magisk tingkat lanjut yang dirancang khusus untuk memaksimalkan performa Android, menghemat baterai secara ekstrem, sekaligus melindungi perangkat Anda dari Iklan dan *Malware* langsung dari level Kernel.
 
 Modul ini sepenuhnya menggunakan *Native Shell Script* sehingga sangat ringan, instan, dan mendukung semua jenis *Stock Kernel* maupun *Custom Kernel* tanpa perlu kompilasi ulang kode C/C++.
 
@@ -18,7 +18,7 @@ Modul ini dilengkapi dengan pelindung internet tingkat kernel (*Kernel-level int
 - Ringan di sistem dan mendukung pengalihan secara dinamis tanpa perlu *reboot*.
 
 ### 3. 🎨 Premium Web UI
-Tidak perlu menggunakan terminal emulator yang membosankan. KSU Optimizer Pro menyertakan Antarmuka Pengguna berbasis Web yang dapat diakses langsung.
+Tidak perlu menggunakan terminal emulator yang membosankan. Rex Kyle Optimizer Pro menyertakan Antarmuka Pengguna berbasis Web yang dapat diakses langsung.
 - Desain *Glassmorphism* modern dengan *Dark Mode* eksklusif yang sangat memanjakan mata.
 - **Sangat Ringan**: Dibangun menggunakan 100% Native HTML & CSS tanpa dependensi *framework* eksternal.
 - **Satu Ketukan**: Ubah *CPU governor*, *Force OC*, aktifkan *UV*, atau hidupkan *Network Shield* hanya dengan satu ketukan (Toggle iOS-style).
@@ -31,7 +31,7 @@ Tidak perlu menggunakan terminal emulator yang membosankan. KSU Optimizer Pro me
 
 ## 🚀 Instalasi & Cara Penggunaan
 
-1. Buka halaman [Releases](../../releases) dan unduh file ZIP terbaru (misal: `KSU_Optimizer_Pro_v1.0.zip`).
+1. Buka halaman [Releases](../../releases) dan unduh file ZIP terbaru (misal: `Rex_Andromalius_Pro_v1.2.zip`).
 2. Buka aplikasi **KernelSU** atau **Magisk Manager**.
 3. Buka tab **Modules** ➜ ketuk **Install from storage**.
 4. Pilih file `.zip` yang telah diunduh, tunggu proses instalasi selesai.
@@ -52,9 +52,9 @@ Seluruh konfigurasi Anda secara otomatis disimpan secara aman (*survive reboot*)
 Jika Anda ingin melakukan eksekusi perintah manual atau integrasi via skrip lain melalui Terminal (contoh Termux/Tasker):
 ```bash
 su
-/data/adb/modules/ksu_optimizer/system/bin/tweaked oc        # Menyalakan OC
-/data/adb/modules/ksu_optimizer/system/bin/tweaked uv        # Menyalakan UV
-/data/adb/modules/ksu_optimizer/system/bin/network_shield enable  # Menghidupkan Shield
+/data/adb/modules/rex_andromalius/system/bin/tweaked oc        # Menyalakan OC
+/data/adb/modules/rex_andromalius/system/bin/tweaked uv        # Menyalakan UV
+/data/adb/modules/rex_andromalius/system/bin/network_shield enable  # Menghidupkan Shield
 ```
 
 ## 📝 Lisensi
